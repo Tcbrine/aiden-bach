@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🍻 Aiden's Bach Party</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg:           #0c1a0d;
+      --surface:      #141f14;
+      --surface2:     #1c2b1c;
+      --border:       #283828;
+      --green:        #4e7d5f;
+      --green-light:  #72a885;
+      --amber:        #e8a838;
+      --amber-dim:    #b07f25;
+      --text:         #ede8d8;
+      --text-muted:   #7a907a;
+      --red:          #c0524a;
+      --tab-h:        68px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body { padding-bottom: var(--tab-h); overflow-x: hidden; }
+
+    /* ── Header ── */
+    .header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px 12px;
+    }
+    .header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px; letter-spacing: 2px;
+      color: var(--amber); line-height: 1;
+    }
+    .header p { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── Bottom Tab Bar ── */
+    .tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: var(--tab-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; z-index: 20;
+    }
+    .tab-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      background: none; border: none;
+      color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px; font-weight: 500;
+      cursor: pointer; padding: 8px 4px 10px;
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-btn.active { color: var(--amber); }
+    .tab-icon { font-size: 22px; line-height: 1; }
+
+    /* ── Panels ── */
+    .panel { display: none; padding: 16px 16px 8px; }
+    .panel.active { display: block; }
+
+    /* ── Section headings ── */
+    .section-head {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15px; letter-spacing: 2px;
+      color: var(--green-light);
+      margin: 22px 0 10px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-head:first-child { margin-top: 2px; }
+    .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .section-count {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px; color: var(--text-muted);
+      letter-spacing: 0; font-weight: 400;
+    }
+
+    /* ── Crew chips ── */
+    .crew-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 7px 14px;
+      font-size: 14px; font-weight: 500;
+    }
+    .chip.maybe { opacity: 0.55; border-style: dashed; font-style: italic; }
+    .chip.full  { border-color: var(--green); }
+    .chip.van   { border-color: var(--amber-dim); }
+    .chip.kara  { border-color: #7a6aaa; }
+
+    /* ── Day cards ── */
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 14px; overflow: hidden;
+    }
+    .day-hdr {
+      background: var(--surface2);
+      padding: 12px 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 1.5px;
+      color: var(--amber);
+    }
+    .sched-item {
+      display: flex; gap: 14px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sched-item:last-child { border-bottom: none; }
+    .sched-time {
+      font-size: 11px; color: var(--text-muted);
+      min-width: 52px; padding-top: 3px; text-align: right;
+    }
+    .sched-body { flex: 1; }
+    .sched-title { font-weight: 600; font-size: 15px; }
+    .sched-loc { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .sched-note { font-size: 12px; color: var(--amber-dim); margin-top: 3px; font-style: italic; }
+
+    /* ── Check items ── */
+    .check-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      transition: opacity 0.2s;
+    }
+    .check-item.done { opacity: 0.4; }
+    .check-item.done .item-name { text-decoration: line-through; color: var(--text-muted); }
+
+    .cbox {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 7px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s; margin-top: 1px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cbox.on { background: var(--green); border-color: var(--green); }
+    .cbox.on::after { content: '✓'; color: #fff; font-size: 14px; font-weight: 700; }
+
+    .item-body { flex: 1; min-width: 0; }
+    .item-name { font-size: 15px; font-weight: 500; line-height: 1.3; }
+    .item-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Assign select ── */
+    .assign-wrap { margin-top: 6px; }
+    .assign-sel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      padding: 5px 28px 5px 8px;
+      max-width: 160px; width: 100%;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a907a'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+    .assign-sel:focus { outline: none; border-color: var(--green); }
+    .assign-sel.assigned { color: var(--amber); border-color: var(--amber-dim); }
+
+    /* ── Add form ── */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px; margin-top: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .add-in {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; padding: 11px 14px;
+      transition: border-color 0.15s;
+    }
+    .add-in::placeholder { color: var(--text-muted); }
+    .add-in:focus { outline: none; border-color: var(--green); }
+
+    .add-row { display: flex; gap: 8px; }
+
+    .cat-sel {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; padding: 10px;
+      appearance: none; -webkit-appearance: none;
+    }
+    .cat-sel:focus { outline: none; border-color: var(--green); }
+
+    .add-btn {
+      background: var(--green); color: #fff;
+      border: none; border-radius: 10px;
+      padding: 10px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .add-btn:active { opacity: 0.75; }
+
+    /* ── Category label ── */
+    .cat-lbl {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 22px 0 8px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .cat-lbl:first-child { margin-top: 4px; }
+    .cat-lbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── States ── */
+    .empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 16px; }
+    .err-banner {
+      background: #2a1010; border: 1px solid var(--red);
+      border-radius: 10px; padding: 12px 16px;
+      color: #e88080; font-size: 13px;
+      margin-bottom: 12px; display: none;
+    }
+    .err-banner.show { display: block; }
+    .spinner { text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+    .spin-ring {
+      width: 28px; height: 28px;
+      border: 2px solid var(--border); border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <h1>🍻 Aiden's Bach</h1>
+  <p>May Long Weekend · Vancouver &amp; Squamish</p>
+</header>
+
+<!-- CREW -->
+<div id="panel-crew" class="panel active">
+  <div class="section-head">FULL TRIP <span class="section-count">(9)</span></div>
+  <div class="crew-list" id="crew-full"></div>
+  <div class="section-head">VANCOUVER ONLY</div>
+  <div class="crew-list" id="crew-van"></div>
+  <div class="section-head">KARAOKE ONLY</div>
+  <div class="crew-list" id="crew-kara"></div>
+</div>
+
+<!-- ITINERARY -->
+<div id="panel-itinerary" class="panel"></div>
+
+<!-- ACTIVITIES -->
+<div id="panel-activities" class="panel">
+  <div id="err-act" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
+  <div id="act-list"></div>
+  <div class="add-form">
+    <input class="add-in" id="act-in" placeholder="Add game or activity…" />
+    <button class="add-btn" onclick="addActivity()">Add</button>
+  </div>
+</div>
+
+<!-- TASKS -->
+<div id="panel-tasks" class="panel">
+  <div id="err-tasks" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
+  <div id="tasks-list"></div>
+  <div class="add-form">
+    <input class="add-in" id="task-in" placeholder="Task description…" />
+    <div class="add-row">
+      <select class="cat-sel" id="task-cat">
+        <option value="Food &amp; Drink">Food &amp; Drink</option>
+        <option value="Bookings">Bookings</option>
+        <option value="Logistics">Logistics</option>
+        <option value="Gear">Gear</option>
+        <option value="Misc">Misc</option>
+      </select>
+      <button class="add-btn" onclick="addTask()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXTRAS -->
+<div id="panel-extras" class="panel">
+  <div id="err-ext" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
+  <div id="ext-list"></div>
+  <div class="add-form">
+    <input class="add-in" id="ext-in" placeholder="Add extra item…" />
+    <button class="add-btn" onclick="addExtra()">Add</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('crew',this)">
+    <span class="tab-icon">👥</span>Crew
+  </button>
+  <button class="tab-btn" onclick="switchTab('itinerary',this)">
+    <span class="tab-icon">📅</span>Schedule
+  </button>
+  <button class="tab-btn" onclick="switchTab('activities',this)">
+    <span class="tab-icon">🎮</span>Activities
+  </button>
+  <button class="tab-btn" onclick="switchTab('tasks',this)">
+    <span class="tab-icon">✅</span>Tasks
+  </button>
+  <button class="tab-btn" onclick="switchTab('extras',this)">
+    <span class="tab-icon">🎩</span>Extras
+  </button>
+</nav>
+
+<script>
+// ================================================================
+//  CONFIG — replace these after creating your Supabase project
+// ================================================================
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+// ================================================================
+
+const CATEGORIES = ['Food & Drink', 'Bookings', 'Logistics', 'Gear', 'Misc'];
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CREW = {
+  full: [
+    { name:'Aiden' },  { name:'Tanner' }, { name:'Scott' },
+    { name:'Cam' },    { name:'Colin' },  { name:'Brett' },
+    { name:'Gordon' }, { name:'Andrew' }, { name:'Jon' }
+  ],
+  van:  [ { name:'Cal' }, { name:'Wayne', maybe:true } ],
+  kara: [
+    { name:'Dayna' }, { name:'Liz' },   { name:'Sarah' },
+    { name:'Caity' }, { name:'Emily' }, { name:'Hannah' },
+    { name:'Kirsty', maybe:true }
+  ]
+};
+
+const ASSIGNABLE = [...CREW.full.map(c => c.name), 'Cal', 'Wayne'];
+
+const ITINERARY = [
+  {
+    label: 'Friday — Vancouver',
+    items: [
+      { time:'Afternoon', title:'Pitch & Putt',          loc:'Stanley Park' },
+      { time:'Evening',   title:'Dinner',                loc:'TBD' },
+      { time:'Night',     title:'Karaoke',               loc:'Heroes Welcome' },
+    ]
+  },
+  {
+    label: 'Saturday — Squamish',
+    items: [
+      { time:'Morning',   title:'Drive up',              loc:'Sea to Sky Hwy' },
+      { time:'TBD',       title:'Hot Voyage Sauna Boat', loc:'Squamish', note:'Confirm booking' },
+      { time:'Afternoon', title:'Whitewater Rafting',    loc:'Squamish River' },
+      { time:'Evening',   title:'Brewery Crawl',         loc:'Squamish' },
+      { time:'Night',     title:'Farm Cabin',            loc:'Squamish' },
+    ]
+  },
+  {
+    label: 'Sunday — Squamish',
+    items: [
+      { time:'Morning',   title:'Cabin hangout',         loc:'Farm Cabin' },
+      { time:'Afternoon', title:'Head back to Vancouver', loc:'' },
+    ]
+  }
+];
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── Crew ─────────────────────────────────────────────────────
+function renderCrew() {
+  const mk = (crew, cls) => crew.map(c =>
+    `<div class="chip ${cls}${c.maybe?' maybe':''}">${c.name}${c.maybe?' ?':''}</div>`
+  ).join('');
+  document.getElementById('crew-full').innerHTML = mk(CREW.full, 'full');
+  document.getElementById('crew-van').innerHTML  = mk(CREW.van,  'van');
+  document.getElementById('crew-kara').innerHTML = mk(CREW.kara, 'kara');
+}
+
+// ── Itinerary ────────────────────────────────────────────────
+function renderItinerary() {
+  document.getElementById('panel-itinerary').innerHTML = ITINERARY.map(day => `
+    <div class="day-card">
+      <div class="day-hdr">${day.label}</div>
+      ${day.items.map(i => `
+        <div class="sched-item">
+          <div class="sched-time">${i.time}</div>
+          <div class="sched-body">
+            <div class="sched-title">${i.title}</div>
+            ${i.loc  ? `<div class="sched-loc">${i.loc}</div>`   : ''}
+            ${i.note ? `<div class="sched-note">${i.note}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+// ── Assign select ─────────────────────────────────────────────
+function mkSelect(id, table, val) {
+  return `<div class="assign-wrap">
+    <select class="assign-sel${val?' assigned':''}" onchange="assignItem('${table}','${id}',this)">
+      <option value="">Assign to…</option>
+      ${ASSIGNABLE.map(n=>`<option value="${n}"${val===n?' selected':''}>${n}</option>`).join('')}
+    </select>
+  </div>`;
+}
+async function assignItem(table, id, sel) {
+  const val = sel.value;
+  sel.className = 'assign-sel' + (val ? ' assigned' : '');
+  await db.from(table).update({ assigned_to: val || null }).eq('id', id);
+}
+
+const spin = `<div class="spinner"><div class="spin-ring"></div>Loading…</div>`;
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Activities ────────────────────────────────────────────────
+let activities = [];
+async function loadActivities() {
+  document.getElementById('act-list').innerHTML = spin;
+  const { data, error } = await db.from('activities').select('*').order('created_at');
+  if (error) { document.getElementById('err-act').classList.add('show'); return; }
+  activities = data || [];
+  renderActivities();
+}
+function renderActivities() {
+  const el = document.getElementById('act-list');
+  el.innerHTML = activities.length
+    ? activities.map(a => `
+        <div class="check-item${a.checked?' done':''}">
+          <div class="cbox${a.checked?' on':''}" onclick="toggleAct('${a.id}',${!a.checked})"></div>
+          <div class="item-body">
+            <div class="item-name">${esc(a.name)}</div>
+            ${mkSelect(a.id,'activities',a.assigned_to)}
+          </div>
+        </div>`).join('')
+    : '<div class="empty">No activities yet — add some</div>';
+}
+async function toggleAct(id, checked) {
+  await db.from('activities').update({ checked }).eq('id', id);
+  activities = activities.map(a => a.id===id ? {...a,checked} : a);
+  renderActivities();
+}
+async function addActivity() {
+  const inp = document.getElementById('act-in');
+  const name = inp.value.trim(); if (!name) return; inp.value = '';
+  const { data } = await db.from('activities').insert({ name, checked:false }).select();
+  if (data) { activities.push(data[0]); renderActivities(); }
+}
+
+// ── Tasks ─────────────────────────────────────────────────────
+let tasks = [];
+async function loadTasks() {
+  document.getElementById('tasks-list').innerHTML = spin;
+  const { data, error } = await db.from('tasks').select('*').order('created_at');
+  if (error) { document.getElementById('err-tasks').classList.add('show'); return; }
+  tasks = data || [];
+  renderTasks();
+}
+function renderTasks() {
+  const el = document.getElementById('tasks-list');
+  let html = '';
+  for (const cat of CATEGORIES) {
+    const items = tasks.filter(t => t.category === cat);
+    if (!items.length) continue;
+    html += `<div class="cat-lbl">${esc(cat)}</div>`;
+    html += items.map(t => `
+      <div class="check-item${t.checked?' done':''}">
+        <div class="cbox${t.checked?' on':''}" onclick="toggleTask('${t.id}',${!t.checked})"></div>
+        <div class="item-body">
+          <div class="item-name">${esc(t.name)}</div>
+          ${mkSelect(t.id,'tasks',t.assigned_to)}
+        </div>
+      </div>`).join('');
+  }
+  el.innerHTML = html || '<div class="empty">No tasks yet — add one below</div>';
+}
+async function toggleTask(id, checked) {
+  await db.from('tasks').update({ checked }).eq('id', id);
+  tasks = tasks.map(t => t.id===id ? {...t,checked} : t);
+  renderTasks();
+}
+async function addTask() {
+  const inp = document.getElementById('task-in');
+  const cat = document.getElementById('task-cat');
+  const name = inp.value.trim(); if (!name) return; inp.value = '';
+  const { data } = await db.from('tasks').insert({ name, category:cat.value, checked:false }).select();
+  if (data) { tasks.push(data[0]); renderTasks(); }
+}
+
+// ── Extras ────────────────────────────────────────────────────
+let extras = [];
+async function loadExtras() {
+  document.getElementById('ext-list').innerHTML = spin;
+  const { data, error } = await db.from('extras').select('*').order('created_at');
+  if (error) { document.getElementById('err-ext').classList.add('show'); return; }
+  extras = data || [];
+  renderExtras();
+}
+function renderExtras() {
+  const el = document.getElementById('ext-list');
+  el.innerHTML = extras.length
+    ? extras.map(e => `
+        <div class="check-item${e.checked?' done':''}">
+          <div class="cbox${e.checked?' on':''}" onclick="toggleExtra('${e.id}',${!e.checked})"></div>
+          <div class="item-body">
+            <div class="item-name">${esc(e.name)}</div>
+            ${e.notes ? `<div class="item-sub">${esc(e.notes)}</div>` : ''}
+            ${mkSelect(e.id,'extras',e.assigned_to)}
+          </div>
+        </div>`).join('')
+    : '<div class="empty">No extras yet</div>';
+}
+async function toggleExtra(id, checked) {
+  await db.from('extras').update({ checked }).eq('id', id);
+  extras = extras.map(e => e.id===id ? {...e,checked} : e);
+  renderExtras();
+}
+async function addExtra() {
+  const inp = document.getElementById('ext-in');
+  const name = inp.value.trim(); if (!name) return; inp.value = '';
+  const { data } = await db.from('extras').insert({ name, checked:false }).select();
+  if (data) { extras.push(data[0]); renderExtras(); }
+}
+
+// ── Realtime ──────────────────────────────────────────────────
+db.channel('bach-party')
+  .on('postgres_changes', { event:'*', schema:'public', table:'activities' }, loadActivities)
+  .on('postgres_changes', { event:'*', schema:'public', table:'tasks' },      loadTasks)
+  .on('postgres_changes', { event:'*', schema:'public', table:'extras' },     loadExtras)
+  .subscribe();
+
+// ── Enter key ─────────────────────────────────────────────────
+document.getElementById('act-in').addEventListener('keydown',  e => e.key==='Enter' && addActivity());
+document.getElementById('task-in').addEventListener('keydown', e => e.key==='Enter' && addTask());
+document.getElementById('ext-in').addEventListener('keydown',  e => e.key==='Enter' && addExtra());
+
+// ── Boot ──────────────────────────────────────────────────────
+renderCrew();
+renderItinerary();
+loadActivities();
+loadTasks();
+loadExtras();
+</script>
+</body>
+</html>
