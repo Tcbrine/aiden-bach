@@ -302,6 +302,106 @@
       cursor: pointer;
     }
 
+    /* ── Bottom sheet modal ── */
+    .sheet-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(2px);
+    }
+    .sheet-overlay.open { display: block; }
+    .sheet {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 101;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 20px 36px;
+      transform: translateY(100%);
+      transition: transform 0.25s ease;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .sheet.open { transform: translateY(0); }
+    .sheet-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 4px;
+    }
+    .sheet-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px; letter-spacing: 1.5px;
+      color: var(--amber); margin-bottom: 4px;
+    }
+    .sheet-field { display: flex; flex-direction: column; gap: 6px; }
+    .sheet-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .sheet-in {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; padding: 12px 14px;
+      transition: border-color 0.15s;
+    }
+    .sheet-in::placeholder { color: var(--text-muted); }
+    .sheet-in:focus { outline: none; border-color: var(--green); }
+    .sheet-sel {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; padding: 12px 14px;
+      appearance: none; -webkit-appearance: none;
+    }
+    .sheet-sel:focus { outline: none; border-color: var(--green); }
+    .sheet-btns { display: flex; gap: 10px; margin-top: 4px; }
+    .sheet-add {
+      flex: 1;
+      background: var(--green); color: #fff;
+      border: none; border-radius: 12px;
+      padding: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px; font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-add:active { opacity: 0.8; }
+    .sheet-cancel {
+      background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── FAB (floating add button) ── */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--tab-h) + 16px);
+      right: 18px;
+      z-index: 30;
+      width: 52px; height: 52px;
+      background: var(--green);
+      border: none; border-radius: 50%;
+      color: #fff; font-size: 26px; font-weight: 300;
+      display: none;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fab.visible { display: flex; }
+    .fab:active { opacity: 0.8; transform: scale(0.95); }
+
     /* ── States ── */
     .empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 16px; }
     .err-banner {
@@ -346,42 +446,59 @@
 <div id="panel-activities" class="panel">
   <div id="err-act" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
   <div id="act-list"></div>
-  <div class="add-form">
-    <input class="add-in" id="act-in" placeholder="Add game or activity…" />
-    <button class="add-btn" onclick="addActivity()">Add</button>
-  </div>
 </div>
 
 <!-- TASKS -->
 <div id="panel-tasks" class="panel">
   <div id="err-tasks" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
   <div id="tasks-list"></div>
-  <div class="add-form">
-    <input class="add-in" id="task-in" placeholder="Task description…" />
-    <div class="add-row">
-      <select class="cat-sel" id="task-cat">
-        <option value="Food &amp; Drink">Food &amp; Drink</option>
-        <option value="Bookings">Bookings</option>
-        <option value="Logistics">Logistics</option>
-        <option value="Gear">Gear</option>
-        <option value="Misc">Misc</option>
-      </select>
-      <button class="add-btn" onclick="addTask()">Add</button>
-    </div>
-  </div>
 </div>
 
 <!-- EXTRAS -->
 <div id="panel-extras" class="panel">
   <div id="err-ext" class="err-banner">Couldn't connect to database. Check your Supabase config.</div>
   <div id="ext-list"></div>
-  <div class="add-form">
-    <input class="add-in" id="ext-in" placeholder="Add extra item…" />
-    <button class="add-btn" onclick="addExtra()">Add</button>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openSheet()">+</button>
+
+<!-- ADD SHEET -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="sheet-title">Add Item</div>
+
+  <div class="sheet-field">
+    <div class="sheet-label">Description</div>
+    <input class="sheet-in" id="sheet-name" placeholder="What needs to happen?" />
+  </div>
+
+  <div class="sheet-field" id="sheet-cat-wrap">
+    <div class="sheet-label">Category</div>
+    <select class="sheet-sel" id="sheet-cat">
+      <option value="Food &amp; Drink">Food &amp; Drink</option>
+      <option value="Bookings">Bookings</option>
+      <option value="Logistics">Logistics</option>
+      <option value="Gear">Gear</option>
+      <option value="Misc">Misc</option>
+    </select>
+  </div>
+
+  <div class="sheet-field">
+    <div class="sheet-label">Assign to (optional)</div>
+    <select class="sheet-sel" id="sheet-assignee">
+      <option value="">No one yet</option>
+    </select>
+  </div>
+
+  <div class="sheet-btns">
+    <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+    <button class="sheet-add" onclick="sheetSubmit()">Add</button>
   </div>
 </div>
 
-<!-- BOTTOM NAV -->
+
 <nav class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('crew',this)">
     <span class="tab-icon">👥</span>Crew
@@ -458,13 +575,65 @@ const ITINERARY = [
 ];
 
 // ── Tab switching ─────────────────────────────────────────────
+const FAB_TABS = ['activities', 'tasks', 'extras'];
 function switchTab(name, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   btn.classList.add('active');
   window.scrollTo(0, 0);
+  const fab = document.getElementById('fab');
+  fab.classList.toggle('visible', FAB_TABS.includes(name));
+  currentTab = name;
 }
+
+// ── Sheet ─────────────────────────────────────────────────────
+let currentTab = 'crew';
+
+function openSheet() {
+  const isTasks = currentTab === 'tasks';
+  document.getElementById('sheet-title').textContent =
+    currentTab === 'activities' ? 'Add Activity' :
+    currentTab === 'extras'     ? 'Add Extra'    : 'Add Task';
+  document.getElementById('sheet-cat-wrap').style.display = isTasks ? 'flex' : 'none';
+  document.getElementById('sheet-name').value = '';
+  document.getElementById('sheet-cat').value = 'Food & Drink';
+  document.getElementById('sheet-assignee').value = '';
+
+  // Populate assignee options
+  const sel = document.getElementById('sheet-assignee');
+  sel.innerHTML = '<option value="">No one yet</option>' +
+    ASSIGNABLE.map(n => `<option value="${n}">${n}</option>`).join('');
+
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  setTimeout(() => document.getElementById('sheet-name').focus(), 300);
+}
+
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+async function sheetSubmit() {
+  const name     = document.getElementById('sheet-name').value.trim();
+  const cat      = document.getElementById('sheet-cat').value;
+  const assignee = document.getElementById('sheet-assignee').value || null;
+  if (!name) { document.getElementById('sheet-name').focus(); return; }
+  closeSheet();
+  if (currentTab === 'activities') {
+    const { data } = await db.from('activities').insert({ name, checked:false, assigned_to:assignee }).select();
+    if (data) { activities.push(data[0]); renderActivities(); }
+  } else if (currentTab === 'tasks') {
+    const { data } = await db.from('tasks').insert({ name, category:cat, checked:false, assigned_to:assignee }).select();
+    if (data) { tasks.push(data[0]); renderTasks(); }
+  } else if (currentTab === 'extras') {
+    const { data } = await db.from('extras').insert({ name, checked:false, assigned_to:assignee }).select();
+    if (data) { extras.push(data[0]); renderExtras(); }
+  }
+}
+
+document.getElementById('sheet-name').addEventListener('keydown', e => e.key === 'Enter' && sheetSubmit());
 
 // ── Crew ─────────────────────────────────────────────────────
 function renderCrew() {
@@ -744,11 +913,6 @@ db.channel('bach-party')
   .on('postgres_changes', { event:'*', schema:'public', table:'tasks' },      loadTasks)
   .on('postgres_changes', { event:'*', schema:'public', table:'extras' },     loadExtras)
   .subscribe();
-
-// ── Enter key ─────────────────────────────────────────────────
-document.getElementById('act-in').addEventListener('keydown',  e => e.key==='Enter' && addActivity());
-document.getElementById('task-in').addEventListener('keydown', e => e.key==='Enter' && addTask());
-document.getElementById('ext-in').addEventListener('keydown',  e => e.key==='Enter' && addExtra());
 
 // ── Boot ──────────────────────────────────────────────────────
 renderCrew();
