@@ -240,6 +240,68 @@
     .cat-lbl:first-child { margin-top: 4px; }
     .cat-lbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
+    /* ── Item actions ── */
+    .item-actions {
+      display: flex; gap: 12px;
+      margin-top: 8px;
+    }
+    .act-link {
+      font-size: 12px; font-weight: 500;
+      background: none; border: none;
+      cursor: pointer; padding: 0;
+      font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .act-link.edit  { color: var(--text-muted); }
+    .act-link.edit:hover { color: var(--green-light); }
+    .act-link.del   { color: var(--text-muted); }
+    .act-link.del:hover { color: var(--red); }
+    .act-link.del.confirm { color: var(--red); }
+
+    /* ── Inline edit form ── */
+    .edit-form {
+      display: flex; flex-direction: column; gap: 8px;
+      margin-top: 6px;
+    }
+    .edit-in {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--green);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; padding: 9px 12px;
+    }
+    .edit-in:focus { outline: none; }
+    .edit-cat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; padding: 8px 10px;
+      appearance: none; -webkit-appearance: none;
+      width: 100%;
+    }
+    .edit-cat:focus { outline: none; border-color: var(--green); }
+    .edit-btns { display: flex; gap: 8px; }
+    .edit-save {
+      background: var(--green); color: #fff;
+      border: none; border-radius: 8px;
+      padding: 8px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .edit-cancel {
+      background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
     /* ── States ── */
     .empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 16px; }
     .err-banner {
@@ -453,27 +515,66 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Editing state ─────────────────────────────────────────────
+let editingAct = null, editingTask = null, editingExtra = null;
+let pendingDelAct = null, pendingDelTask = null, pendingDelExtra = null;
+
 // ── Activities ────────────────────────────────────────────────
 let activities = [];
 async function loadActivities() {
   document.getElementById('act-list').innerHTML = spin;
   const { data, error } = await db.from('activities').select('*').order('created_at');
   if (error) { document.getElementById('err-act').classList.add('show'); return; }
-  activities = data || [];
+  activities = data || []; editingAct = null; pendingDelAct = null;
   renderActivities();
 }
 function renderActivities() {
   const el = document.getElementById('act-list');
-  el.innerHTML = activities.length
-    ? activities.map(a => `
-        <div class="check-item${a.checked?' done':''}">
-          <div class="cbox${a.checked?' on':''}" onclick="toggleAct('${a.id}',${!a.checked})"></div>
-          <div class="item-body">
-            <div class="item-name">${esc(a.name)}</div>
-            ${mkSelect(a.id,'activities',a.assigned_to)}
+  if (!activities.length) { el.innerHTML = '<div class="empty">No activities yet — add some</div>'; return; }
+  el.innerHTML = activities.map(a => {
+    if (editingAct === a.id) return `
+      <div class="check-item">
+        <div class="cbox${a.checked?' on':''}"></div>
+        <div class="item-body">
+          <div class="edit-form">
+            <input class="edit-in" id="edit-act-${a.id}" value="${esc(a.name)}" />
+            <div class="edit-btns">
+              <button class="edit-save" onclick="saveAct('${a.id}')">Save</button>
+              <button class="edit-cancel" onclick="editingAct=null;renderActivities()">Cancel</button>
+            </div>
           </div>
-        </div>`).join('')
-    : '<div class="empty">No activities yet — add some</div>';
+        </div>
+      </div>`;
+    return `
+      <div class="check-item${a.checked?' done':''}">
+        <div class="cbox${a.checked?' on':''}" onclick="toggleAct('${a.id}',${!a.checked})"></div>
+        <div class="item-body">
+          <div class="item-name">${esc(a.name)}</div>
+          ${mkSelect(a.id,'activities',a.assigned_to)}
+          <div class="item-actions">
+            <button class="act-link edit" onclick="editingAct='${a.id}';pendingDelAct=null;renderActivities()">Edit</button>
+            <button class="act-link del${pendingDelAct===a.id?' confirm':''}"
+              onclick="delAct('${a.id}')">
+              ${pendingDelAct===a.id ? 'Tap again to confirm' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  if (editingAct) setTimeout(() => document.getElementById('edit-act-'+editingAct)?.focus(), 50);
+}
+async function saveAct(id) {
+  const val = document.getElementById('edit-act-'+id)?.value.trim();
+  if (!val) return;
+  await db.from('activities').update({ name: val }).eq('id', id);
+  activities = activities.map(a => a.id===id ? {...a, name:val} : a);
+  editingAct = null; renderActivities();
+}
+async function delAct(id) {
+  if (pendingDelAct !== id) { pendingDelAct = id; renderActivities(); return; }
+  await db.from('activities').delete().eq('id', id);
+  activities = activities.filter(a => a.id !== id);
+  pendingDelAct = null; renderActivities();
 }
 async function toggleAct(id, checked) {
   await db.from('activities').update({ checked }).eq('id', id);
@@ -493,7 +594,7 @@ async function loadTasks() {
   document.getElementById('tasks-list').innerHTML = spin;
   const { data, error } = await db.from('tasks').select('*').order('created_at');
   if (error) { document.getElementById('err-tasks').classList.add('show'); return; }
-  tasks = data || [];
+  tasks = data || []; editingTask = null; pendingDelTask = null;
   renderTasks();
 }
 function renderTasks() {
@@ -503,16 +604,56 @@ function renderTasks() {
     const items = tasks.filter(t => t.category === cat);
     if (!items.length) continue;
     html += `<div class="cat-lbl">${esc(cat)}</div>`;
-    html += items.map(t => `
-      <div class="check-item${t.checked?' done':''}">
-        <div class="cbox${t.checked?' on':''}" onclick="toggleTask('${t.id}',${!t.checked})"></div>
-        <div class="item-body">
-          <div class="item-name">${esc(t.name)}</div>
-          ${mkSelect(t.id,'tasks',t.assigned_to)}
-        </div>
-      </div>`).join('');
+    html += items.map(t => {
+      if (editingTask === t.id) return `
+        <div class="check-item">
+          <div class="cbox${t.checked?' on':''}"></div>
+          <div class="item-body">
+            <div class="edit-form">
+              <input class="edit-in" id="edit-task-${t.id}" value="${esc(t.name)}" />
+              <select class="edit-cat" id="edit-task-cat-${t.id}">
+                ${CATEGORIES.map(c=>`<option value="${c}"${c===t.category?' selected':''}>${c}</option>`).join('')}
+              </select>
+              <div class="edit-btns">
+                <button class="edit-save" onclick="saveTask('${t.id}')">Save</button>
+                <button class="edit-cancel" onclick="editingTask=null;renderTasks()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      return `
+        <div class="check-item${t.checked?' done':''}">
+          <div class="cbox${t.checked?' on':''}" onclick="toggleTask('${t.id}',${!t.checked})"></div>
+          <div class="item-body">
+            <div class="item-name">${esc(t.name)}</div>
+            ${mkSelect(t.id,'tasks',t.assigned_to)}
+            <div class="item-actions">
+              <button class="act-link edit" onclick="editingTask='${t.id}';pendingDelTask=null;renderTasks()">Edit</button>
+              <button class="act-link del${pendingDelTask===t.id?' confirm':''}"
+                onclick="delTask('${t.id}')">
+                ${pendingDelTask===t.id ? 'Tap again to confirm' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
   }
   el.innerHTML = html || '<div class="empty">No tasks yet — add one below</div>';
+  if (editingTask) setTimeout(() => document.getElementById('edit-task-'+editingTask)?.focus(), 50);
+}
+async function saveTask(id) {
+  const val = document.getElementById('edit-task-'+id)?.value.trim();
+  const cat = document.getElementById('edit-task-cat-'+id)?.value;
+  if (!val) return;
+  await db.from('tasks').update({ name: val, category: cat }).eq('id', id);
+  tasks = tasks.map(t => t.id===id ? {...t, name:val, category:cat} : t);
+  editingTask = null; renderTasks();
+}
+async function delTask(id) {
+  if (pendingDelTask !== id) { pendingDelTask = id; renderTasks(); return; }
+  await db.from('tasks').delete().eq('id', id);
+  tasks = tasks.filter(t => t.id !== id);
+  pendingDelTask = null; renderTasks();
 }
 async function toggleTask(id, checked) {
   await db.from('tasks').update({ checked }).eq('id', id);
@@ -533,22 +674,57 @@ async function loadExtras() {
   document.getElementById('ext-list').innerHTML = spin;
   const { data, error } = await db.from('extras').select('*').order('created_at');
   if (error) { document.getElementById('err-ext').classList.add('show'); return; }
-  extras = data || [];
+  extras = data || []; editingExtra = null; pendingDelExtra = null;
   renderExtras();
 }
 function renderExtras() {
   const el = document.getElementById('ext-list');
-  el.innerHTML = extras.length
-    ? extras.map(e => `
-        <div class="check-item${e.checked?' done':''}">
-          <div class="cbox${e.checked?' on':''}" onclick="toggleExtra('${e.id}',${!e.checked})"></div>
-          <div class="item-body">
-            <div class="item-name">${esc(e.name)}</div>
-            ${e.notes ? `<div class="item-sub">${esc(e.notes)}</div>` : ''}
-            ${mkSelect(e.id,'extras',e.assigned_to)}
+  if (!extras.length) { el.innerHTML = '<div class="empty">No extras yet</div>'; return; }
+  el.innerHTML = extras.map(e => {
+    if (editingExtra === e.id) return `
+      <div class="check-item">
+        <div class="cbox${e.checked?' on':''}"></div>
+        <div class="item-body">
+          <div class="edit-form">
+            <input class="edit-in" id="edit-ext-${e.id}" value="${esc(e.name)}" />
+            <div class="edit-btns">
+              <button class="edit-save" onclick="saveExtra('${e.id}')">Save</button>
+              <button class="edit-cancel" onclick="editingExtra=null;renderExtras()">Cancel</button>
+            </div>
           </div>
-        </div>`).join('')
-    : '<div class="empty">No extras yet</div>';
+        </div>
+      </div>`;
+    return `
+      <div class="check-item${e.checked?' done':''}">
+        <div class="cbox${e.checked?' on':''}" onclick="toggleExtra('${e.id}',${!e.checked})"></div>
+        <div class="item-body">
+          <div class="item-name">${esc(e.name)}</div>
+          ${e.notes ? `<div class="item-sub">${esc(e.notes)}</div>` : ''}
+          ${mkSelect(e.id,'extras',e.assigned_to)}
+          <div class="item-actions">
+            <button class="act-link edit" onclick="editingExtra='${e.id}';pendingDelExtra=null;renderExtras()">Edit</button>
+            <button class="act-link del${pendingDelExtra===e.id?' confirm':''}"
+              onclick="delExtra('${e.id}')">
+              ${pendingDelExtra===e.id ? 'Tap again to confirm' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  if (editingExtra) setTimeout(() => document.getElementById('edit-ext-'+editingExtra)?.focus(), 50);
+}
+async function saveExtra(id) {
+  const val = document.getElementById('edit-ext-'+id)?.value.trim();
+  if (!val) return;
+  await db.from('extras').update({ name: val }).eq('id', id);
+  extras = extras.map(e => e.id===id ? {...e, name:val} : e);
+  editingExtra = null; renderExtras();
+}
+async function delExtra(id) {
+  if (pendingDelExtra !== id) { pendingDelExtra = id; renderExtras(); return; }
+  await db.from('extras').delete().eq('id', id);
+  extras = extras.filter(e => e.id !== id);
+  pendingDelExtra = null; renderExtras();
 }
 async function toggleExtra(id, checked) {
   await db.from('extras').update({ checked }).eq('id', id);
