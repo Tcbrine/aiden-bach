@@ -74,7 +74,7 @@
     .tab-icon { font-size: 22px; line-height: 1; }
 
     /* ── Panels ── */
-    .panel { display: none; padding: 16px 16px 8px; }
+    .panel { display: none; padding: 16px 16px 84px; }
     .panel.active { display: block; }
 
     /* ── Section headings ── */
@@ -498,7 +498,6 @@
   </div>
 </div>
 
-
 <nav class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('crew',this)">
     <span class="tab-icon">👥</span>Crew
@@ -518,12 +517,8 @@
 </nav>
 
 <script>
-// ================================================================
-//  CONFIG — replace these after creating your Supabase project
-// ================================================================
 const SUPABASE_URL = 'https://ojkgwzgoyltwgyfyrico.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Ql8N1F-aJ0sx95f5Qv-rvQ_JyFdVUdR';
-// ================================================================
 
 const CATEGORIES = ['Food & Drink', 'Bookings', 'Logistics', 'Gear', 'Misc'];
 
@@ -550,35 +545,34 @@ const ITINERARY = [
   {
     label: 'Friday — Vancouver',
     items: [
-      { time:'4:30pm', title:'Pitch & Putt',          loc:'Queen Elizabeth Park' },
-      { time:'7:30pm',   title:'Light Dinner',                loc:'BBQ Chicken on Main' },
-      { time:'9:30pm',     title:'Karaoke',               loc:'Heroes Welcome' },
+      { time:'4:30pm',   title:'Pitch & Putt',        loc:'Queen Elizabeth Park' },
+      { time:'7:30pm',   title:'Light Dinner',         loc:'BBQ Chicken on Main' },
+      { time:'9:30pm',   title:'Karaoke',              loc:'Heroes Welcome' },
     ]
   },
   {
     label: 'Saturday — Squamish',
     items: [
-      { time:'11:15am',   title:'Sauna Boat',              loc:'Port Moody' },
-      { time:'1:30pm',       title:'Lunch', loc:'Hightop Pizza', note:'Eaten at Rewind or another brewery' },
-      { time:'Afternoon', title:'Drive to Squamish',    loc:'Sea to Sky Highway' },
-      { time:'Evening',   title:'BBQ, hot tub, yard games, etc.',         loc:'Squamish Cabin' },
+      { time:'11:15am',  title:'Sauna Boat',            loc:'Port Moody' },
+      { time:'1:30pm',   title:'Lunch',                 loc:'Hightop Pizza', note:'Eaten at Rewind or another brewery' },
+      { time:'Afternoon',title:'Drive to Squamish',     loc:'Sea to Sky Highway' },
+      { time:'Evening',  title:'BBQ, hot tub, yard games, etc.', loc:'Squamish Cabin' },
     ]
   },
   {
     label: 'Sunday — Squamish',
     items: [
-      { time:'Morning',   title:'Cabin hangout',         loc:'Farm Cabin' },
-      { time:'Morning',   title:'Disc golf',         loc:'Legacy Park' },
-      { time:'Afternoon', title:'Lunch and drinks', loc:'Brewery (A-frame or Backcountry)' },
-      { time:'Evening', title:'Cabin dinner, hot tub, yard games, etc.', loc:'Squamish Cabin' },
+      { time:'Morning',  title:'Cabin hangout',         loc:'Farm Cabin' },
+      { time:'Morning',  title:'Disc golf',             loc:'Legacy Park' },
+      { time:'Afternoon',title:'Lunch and drinks',      loc:'Brewery (A-frame or Backcountry)' },
+      { time:'Evening',  title:'Cabin dinner, hot tub, yard games, etc.', loc:'Squamish Cabin' },
     ]
   },
-  
   {
     label: 'Monday — Return home',
     items: [
-      { time:'Morning',   title:'Cleanup, check-out',         loc:'Farm Cabin' },      
-      { time:'Morning',   title:'Drive back to Vancouver',         loc:'Sea to Sky Highway' },
+      { time:'Morning',  title:'Cleanup, check-out',    loc:'Farm Cabin' },
+      { time:'Morning',  title:'Drive back to Vancouver', loc:'Sea to Sky Highway' },
     ]
   }
 ];
@@ -609,7 +603,6 @@ function openSheet() {
   document.getElementById('sheet-cat').value = 'Food & Drink';
   document.getElementById('sheet-assignee').value = '';
 
-  // Populate assignee options
   const sel = document.getElementById('sheet-assignee');
   sel.innerHTML = '<option value="">No one yet</option>' +
     ASSIGNABLE.map(n => `<option value="${n}">${n}</option>`).join('');
@@ -731,8 +724,7 @@ function renderActivities() {
           ${mkSelect(a.id,'activities',a.assigned_to)}
           <div class="item-actions">
             <button class="act-link edit" onclick="editingAct='${a.id}';pendingDelAct=null;renderActivities()">Edit</button>
-            <button class="act-link del${pendingDelAct===a.id?' confirm':''}"
-              onclick="delAct('${a.id}')">
+            <button class="act-link del${pendingDelAct===a.id?' confirm':''}" onclick="delAct('${a.id}')">
               ${pendingDelAct===a.id ? 'Tap again to confirm' : 'Delete'}
             </button>
           </div>
@@ -758,12 +750,6 @@ async function toggleAct(id, checked) {
   await db.from('activities').update({ checked }).eq('id', id);
   activities = activities.map(a => a.id===id ? {...a,checked} : a);
   renderActivities();
-}
-async function addActivity() {
-  const inp = document.getElementById('act-in');
-  const name = inp.value.trim(); if (!name) return; inp.value = '';
-  const { data } = await db.from('activities').insert({ name, checked:false }).select();
-  if (data) { activities.push(data[0]); renderActivities(); }
 }
 
 // ── Tasks ─────────────────────────────────────────────────────
@@ -807,8 +793,7 @@ function renderTasks() {
             ${mkSelect(t.id,'tasks',t.assigned_to)}
             <div class="item-actions">
               <button class="act-link edit" onclick="editingTask='${t.id}';pendingDelTask=null;renderTasks()">Edit</button>
-              <button class="act-link del${pendingDelTask===t.id?' confirm':''}"
-                onclick="delTask('${t.id}')">
+              <button class="act-link del${pendingDelTask===t.id?' confirm':''}" onclick="delTask('${t.id}')">
                 ${pendingDelTask===t.id ? 'Tap again to confirm' : 'Delete'}
               </button>
             </div>
@@ -837,13 +822,6 @@ async function toggleTask(id, checked) {
   await db.from('tasks').update({ checked }).eq('id', id);
   tasks = tasks.map(t => t.id===id ? {...t,checked} : t);
   renderTasks();
-}
-async function addTask() {
-  const inp = document.getElementById('task-in');
-  const cat = document.getElementById('task-cat');
-  const name = inp.value.trim(); if (!name) return; inp.value = '';
-  const { data } = await db.from('tasks').insert({ name, category:cat.value, checked:false }).select();
-  if (data) { tasks.push(data[0]); renderTasks(); }
 }
 
 // ── Extras ────────────────────────────────────────────────────
@@ -881,8 +859,7 @@ function renderExtras() {
           ${mkSelect(e.id,'extras',e.assigned_to)}
           <div class="item-actions">
             <button class="act-link edit" onclick="editingExtra='${e.id}';pendingDelExtra=null;renderExtras()">Edit</button>
-            <button class="act-link del${pendingDelExtra===e.id?' confirm':''}"
-              onclick="delExtra('${e.id}')">
+            <button class="act-link del${pendingDelExtra===e.id?' confirm':''}" onclick="delExtra('${e.id}')">
               ${pendingDelExtra===e.id ? 'Tap again to confirm' : 'Delete'}
             </button>
           </div>
@@ -908,12 +885,6 @@ async function toggleExtra(id, checked) {
   await db.from('extras').update({ checked }).eq('id', id);
   extras = extras.map(e => e.id===id ? {...e,checked} : e);
   renderExtras();
-}
-async function addExtra() {
-  const inp = document.getElementById('ext-in');
-  const name = inp.value.trim(); if (!name) return; inp.value = '';
-  const { data } = await db.from('extras').insert({ name, checked:false }).select();
-  if (data) { extras.push(data[0]); renderExtras(); }
 }
 
 // ── Realtime ──────────────────────────────────────────────────
